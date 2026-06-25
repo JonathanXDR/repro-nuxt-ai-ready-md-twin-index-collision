@@ -7,7 +7,7 @@
     "dev": "nuxt dev",
     "build": "nuxt build",
     "preview": "nuxt preview",
-    "repro": "nuxt generate && node repro-check.mjs",
+    "repro": "NODE_OPTIONS=--experimental-sqlite nuxt generate && node repro-check.mjs",
     "postinstall": "nuxt prepare"
   },
   "devDependencies": {
@@ -18,6 +18,6 @@
     "vue": "3.5.38"
   },
   "dependencies": {
-    "better-sqlite3": "^12.11.1"
+    "better-sqlite3": "file:./shims/better-sqlite3"
   }
 }

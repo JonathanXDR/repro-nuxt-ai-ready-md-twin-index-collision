@@ -1,6 +1,6 @@
 # nuxt-ai-ready reproduction: Markdown twin shadows the canonical HTML
 
-Minimal reproduction for a nuxt-ai-ready bug present in 1.5.0.
+Minimal Nuxt 4 reproduction for a nuxt-ai-ready bug present in 1.5.0.
 
 nuxt-ai-ready writes each page's Markdown twin to `<route>/index.md`, **inside the
 page's own prerendered directory**, next to its `index.html`. On any host that
@@ -11,28 +11,23 @@ text in Quirks Mode with no CSS or JS.
 
 See [ISSUE.md](./ISSUE.md) for the full report with code citations.
 
-## Reproduce locally (the deterministic part)
+## Reproduce on StackBlitz
 
-```sh
-npm install
-npm run repro
-```
+https://stackblitz.com/github/JonathanXDR/repro-nuxt-ai-ready-md-twin-index-collision
 
-`npm run repro` runs `nuxt generate` and then prints the output paths for the
-`/about/` page:
+It runs `nuxt generate` and prints the output paths for the `/about/` page:
 
 ```
-  about/index.html  (the prerendered page) : EXISTS
-  about/index.md    (twin INSIDE page dir) : EXISTS   <-- collides with the page
-  about.md          (twin as a sibling)    : EXISTS
-
-  The page advertises its twin at: /about.md
+about/index.html  (the prerendered page) : EXISTS
+about/index.md    (twin INSIDE page dir) : EXISTS   <-- collides with the page
+about.md          (twin as a sibling)    : EXISTS
+The page advertises its twin at: /about.md
 ```
 
 The twin is written to `about/index.md`, sitting on top of the page's own
-directory. (A correct sibling `about.md` is written too, which is what the page's
-`<link rel="alternate">` advertises, so the in-directory `about/index.md` is a
-redundant copy that also breaks the canonical URL.)
+directory. A correct sibling `about.md` (the path the page's
+`<link rel="alternate">` advertises) is written too, so the in-directory
+`about/index.md` is a redundant copy that also breaks the canonical URL.
 
 ## Reproduce the actual breakage on Vercel
 
@@ -43,14 +38,17 @@ Deploy this repo to Vercel and open `/about/`. It serves the Markdown twin
 The generated `config.json` maps `about/index.html => { path: "about" }`, but the
 sibling `about/index.md` shadows it, so the canonical URL resolves to the
 Markdown. This was first observed on a production deployment with the byte for
-byte same output structure.
+byte same output structure, where every locale landing page served raw Markdown.
 
 ## Notes
 
-- The build-time crawler that writes the twins imports the native
-  `better-sqlite3` package regardless of `aiReady.database.type`, so the build
-  needs it. That is why this runs locally and on Vercel but **not in StackBlitz
-  WebContainer**, which cannot build native addons.
+- nuxt-ai-ready's build-time crawler imports the native `better-sqlite3` package
+  to collect page data, regardless of `aiReady.database.type` (`dist/module.mjs`).
+  Native addons cannot build in StackBlitz WebContainer, so this repo ships a
+  tiny drop-in at `shims/better-sqlite3` backed by Node's built-in `node:sqlite`
+  (Node 22.5+), wired in via `dependencies` so the build runs with no native
+  addon. The shim only touches the crawler's bookkeeping DB. The Markdown twins
+  are written by Nitro's prerender, so the shim does not affect the bug.
 - `aiReady.database.type` is `sqlite` and a Nitro build alias maps the native
   `mdream` engine to its pure JS twin `@mdream/js`. Neither touches the bug,
   which is purely the output path of the Markdown twin.

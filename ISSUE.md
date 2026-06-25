@@ -37,10 +37,10 @@ that file inside `about/`.
 
 ## 🛠️ To reproduce
 
-https://github.com/JonathanXDR/repro-nuxt-ai-ready-md-twin-index-collision
+https://stackblitz.com/github/JonathanXDR/repro-nuxt-ai-ready-md-twin-index-collision
 
-`npm install && npm run repro` runs `nuxt generate` and prints the colliding
-paths:
+The StackBlitz (or `npm install && npm run repro` locally) runs `nuxt generate`
+and prints the colliding paths:
 
 ```
 about/index.html  (the prerendered page) : EXISTS
@@ -65,12 +65,13 @@ the page's directory, so it can never shadow the canonical `index.html`.
 ## ℹ️ Additional context
 
 The build-time crawler that writes the twins imports the native `better-sqlite3`
-package regardless of `aiReady.database.type` (`dist/module.mjs`), so the build
-needs it. The reproduction therefore runs locally and on Vercel but not in
-StackBlitz WebContainer, which cannot build native addons. `aiReady.database.type`
-is `sqlite` and a Nitro build alias maps the native `mdream` engine to its pure JS
-twin `@mdream/js`. Neither touches the bug, which is purely the output path of the
-twin.
+package regardless of `aiReady.database.type` (`dist/module.mjs` initCrawler). To
+run in StackBlitz WebContainer, which cannot build native addons, the repo ships a
+tiny drop-in for `better-sqlite3` backed by Node's built-in `node:sqlite`. The
+shim only touches the crawler's bookkeeping database. The Markdown twins are
+written by Nitro's prerender, so neither the shim, the `sqlite` database type, nor
+the `mdream` to `@mdream/js` alias touches the bug, which is purely the output path
+of the twin.
 
 <details><summary><code>nuxi info</code> (reproduction)</summary>
 
