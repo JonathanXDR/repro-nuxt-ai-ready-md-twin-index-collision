@@ -44,11 +44,13 @@ byte same output structure, where every locale landing page served raw Markdown.
 
 - nuxt-ai-ready's build-time crawler imports the native `better-sqlite3` package
   to collect page data, regardless of `aiReady.database.type` (`dist/module.mjs`).
-  Native addons cannot build in StackBlitz WebContainer, so this repo ships a
-  tiny drop-in at `shims/better-sqlite3` backed by Node's built-in `node:sqlite`
-  (Node 22.5+), wired in via `dependencies` so the build runs with no native
-  addon. The shim only touches the crawler's bookkeeping DB. The Markdown twins
-  are written by Nitro's prerender, so the shim does not affect the bug.
+  Native addons cannot build in StackBlitz WebContainer, and WebContainer's
+  built-in `node:sqlite` is non-functional there, so this repo redirects
+  `better-sqlite3` to a tiny pure JS no-op stand-in at `shims/better-sqlite3`
+  (via a `file:` dependency) so the build runs with no SQLite at all. The crawler
+  uses the DB only to index pages for `llms.txt`. The Markdown twins are written
+  by Nitro's prerender, so the no-op DB still reproduces the twin collision and
+  `llms.txt` simply ends up empty.
 - `aiReady.database.type` is `sqlite` and a Nitro build alias maps the native
   `mdream` engine to its pure JS twin `@mdream/js`. Neither touches the bug,
   which is purely the output path of the Markdown twin.

@@ -7,7 +7,7 @@
     "dev": "nuxt dev",
     "build": "nuxt build",
     "preview": "nuxt preview",
-    "repro": "NODE_OPTIONS=--experimental-sqlite nuxt generate && node repro-check.mjs",
+    "repro": "nuxt generate && node repro-check.mjs",
     "postinstall": "nuxt prepare"
   },
   "devDependencies": {

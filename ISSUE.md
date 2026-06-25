@@ -64,14 +64,17 @@ the page's directory, so it can never shadow the canonical `index.html`.
 
 ## ℹ️ Additional context
 
-The build-time crawler that writes the twins imports the native `better-sqlite3`
-package regardless of `aiReady.database.type` (`dist/module.mjs` initCrawler). To
-run in StackBlitz WebContainer, which cannot build native addons, the repo ships a
-tiny drop-in for `better-sqlite3` backed by Node's built-in `node:sqlite`. The
-shim only touches the crawler's bookkeeping database. The Markdown twins are
-written by Nitro's prerender, so neither the shim, the `sqlite` database type, nor
-the `mdream` to `@mdream/js` alias touches the bug, which is purely the output path
-of the twin.
+The build-time crawler that triggers the twin writes imports the native
+`better-sqlite3` package regardless of `aiReady.database.type` (`dist/module.mjs`
+initCrawler). That native addon cannot build in StackBlitz WebContainer, and
+WebContainer's built-in `node:sqlite` is non-functional there too (its
+`DatabaseSync` instances have no working `prepare()`), so the crawler would
+otherwise throw and abort before any twin is written. To run in StackBlitz, the
+repo redirects `better-sqlite3` to a pure JS no-op stand-in. The crawler uses the
+DB only to index pages for `llms.txt`, so the no-op DB still reproduces the twin
+collision (`llms.txt` simply ends up empty). Neither the stand-in, the `sqlite`
+database type, nor the `mdream` to `@mdream/js` alias touches the bug, which is
+purely the output path of the twin.
 
 <details><summary><code>nuxi info</code> (reproduction)</summary>
 

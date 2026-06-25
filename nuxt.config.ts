@@ -7,12 +7,14 @@ export default defineNuxtConfig({
   },
   compatibilityDate: '2026-03-21',
   // nuxt-ai-ready's build-time crawler imports the native 'better-sqlite3'
-  // package regardless of database.type (dist/module.mjs), so this repo installs
-  // it and uses the default 'sqlite' driver. The crawler is what writes the
-  // Markdown twins, so the bug only appears once it runs. A Nitro build alias
-  // maps the native 'mdream' engine to its pure JS twin '@mdream/js' to keep the
-  // native footprint small. Run locally or deploy to Vercel. StackBlitz
-  // WebContainer cannot build the native 'better-sqlite3', so it cannot run this.
+  // package regardless of database.type (dist/module.mjs), and the crawler is
+  // what triggers the Markdown twin writes, so the bug only appears once it runs.
+  // The native addon cannot build in StackBlitz WebContainer, and WebContainer's
+  // node:sqlite is non-functional, so this repo redirects 'better-sqlite3' to a
+  // pure JS no-op stand-in (shims/better-sqlite3) via a file: dependency. The
+  // crawler uses the DB only to index pages for llms.txt, so the no-op DB still
+  // reproduces the twin collision. A Nitro build alias maps the native 'mdream'
+  // engine to its pure JS twin '@mdream/js'.
   aiReady: { database: { type: 'sqlite' } },
   nitro: {
     alias: { mdream: '@mdream/js' },

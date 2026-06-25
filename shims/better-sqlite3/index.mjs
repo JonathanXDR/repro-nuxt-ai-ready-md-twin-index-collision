@@ -1,36 +1,85 @@
-// WebContainer-compatible drop-in for better-sqlite3, backed by Node's built-in
-// node:sqlite (Node 22.5+). nuxt-ai-ready's build-time crawler hard-imports
-// 'better-sqlite3' (module.mjs initCrawler), which is a native addon and cannot
-// build in StackBlitz WebContainer. This wraps node:sqlite's DatabaseSync to the
-// small subset of the better-sqlite3 API the crawler uses (new Database(path),
-// db.prepare(sql).all/get/run(...params), db.close()), so the build runs with no
-// native addon. The DB is only used to collect page data for llms.txt; the
-// Markdown twins themselves are written by Nitro's prerender, so this does not
-// affect the bug.
-import { DatabaseSync } from 'node:sqlite'
-
-export default class Database {
-  constructor(path, options = {}) {
-    this._db = new DatabaseSync(path ?? ':memory:', {
-      readOnly: Boolean(options.readonly ?? options.readOnly ?? false),
-    })
+// Pure-JS in-memory stand-in for better-sqlite3, for StackBlitz WebContainer.
+//
+// nuxt-ai-ready's build-time crawler hard-imports 'better-sqlite3'
+// (module.mjs initCrawler), a native addon that cannot build in WebContainer.
+// WebContainer's built-in node:sqlite is also non-functional (its DatabaseSync
+// instances have no working prepare()), so a node:sqlite-backed shim throws
+// "this._db.prepare is not a function" and the crawler aborts before any twin
+// is written.
+//
+// The crawler only uses the DB to index pages for llms.txt and search. The
+// Markdown twins themselves are written by Nitro's prerender (the
+// x-nitro-prerender fetch in processSitemapEntry), independent of the DB. So a
+// no-op DB that never throws lets the crawl complete and the twins generate,
+// faithfully reproducing the twin collision. llms.txt ends up empty, which is
+// irrelevant to this bug.
+class Statement {
+  constructor(sql) {
+    this.sql = sql
   }
 
-  prepare(sql) {
-    return this._db.prepare(sql)
-  }
-
-  exec(sql) {
-    this._db.exec(sql)
-    return this
-  }
-
-  pragma(source) {
-    this._db.exec(`PRAGMA ${source}`)
+  all() {
     return []
   }
 
+  get() {
+    return undefined
+  }
+
+  run() {
+    return { changes: 0, lastInsertRowid: 0 }
+  }
+
+  iterate() {
+    return [][Symbol.iterator]()
+  }
+
+  pluck() {
+    return this
+  }
+
+  raw() {
+    return this
+  }
+
+  bind() {
+    return this
+  }
+}
+
+export default class Database {
+  constructor(path) {
+    this.name = path ?? ':memory:'
+    this.open = true
+    this.memory = true
+  }
+
+  prepare(sql) {
+    return new Statement(sql)
+  }
+
+  exec() {
+    return this
+  }
+
+  pragma() {
+    return []
+  }
+
+  transaction(fn) {
+    const run = (...args) => fn(...args)
+    run.deferred = run
+    run.immediate = run
+    run.exclusive = run
+    return run
+  }
+
+  function() {
+    return this
+  }
+
   close() {
-    this._db.close()
+    this.open = false
+    return this
   }
 }
